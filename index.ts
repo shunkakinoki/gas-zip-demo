@@ -50,7 +50,7 @@ async function getEthPriceUsd(): Promise<number> {
 	}
 }
 
-async function getCalldata({
+async function getQuote({
 	// fromAddress,
 	toAddress,
 	amount,
@@ -66,13 +66,13 @@ async function getCalldata({
 	// Overriding the from address to the KAKI ETH address to have a custom refundTo address
 	const url = `https://backend.gas.zip/v2/quotes/${arbitrum.id}/${amount}/${chainIdsStr}?from=${KAKI_ETH_ADDRESS}&to=${toAddress}`;
 
-	console.log("🌐 Fetching calldata from gas.zip API...");
+	console.log("🌐 Fetching quote from gas.zip API...");
 	console.log("  - URL:", url);
 
 	const response = await fetch(url);
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.error("❌ Failed to fetch calldata. Status:", response.status, response.statusText);
+		console.error("❌ Failed to fetch quote. Status:", response.status, response.statusText);
 		console.error("  - Error:", errorText);
 		
 		// Parse error response to provide helpful suggestions
@@ -96,15 +96,23 @@ async function getCalldata({
 			// If error parsing fails, continue with original error
 		}
 		
-		throw new Error(`Failed to fetch calldata: ${response.status} ${response.statusText}`);
+		throw new Error(`Failed to fetch quote: ${response.status} ${response.statusText}`);
 	}
 
 	const data = await response.json();
-	console.log("✅ Calldata received");
+	console.log("✅ Quote received");
 	console.log("  - Response data:", JSON.stringify(data, null, 2));
-	console.log("  - Calldata length:", data.calldata?.length || 0, "characters");
 	
-	return data.calldata;
+	return data as {
+		calldata?: string;
+		contractDepositTxn?: {
+			data: string;
+			to: string;
+			value: string;
+		};
+		expires?: number;
+		quotes?: Array<unknown>;
+	};
 }
 
 (async () => {
@@ -127,24 +135,43 @@ async function getCalldata({
 		console.log("  - Outbound Chains:", outboundChains);
 		console.log("  - Direct Deposit Address:", DIRECT_DEPOSIT_ADDRESS);
 
-		const txData = await getCalldata({
-			// fromAddress: KAKI_ETH_ADDRESS,
+		const quote = await getQuote({
+			fromAddress: KAKI_ETH_ADDRESS,
 			toAddress,
 			amount,
 			chainIds: outboundChains,
 		});
 
-		console.log("\n📤 Preparing transaction...");
-		console.log("  - To:", DIRECT_DEPOSIT_ADDRESS);
-		console.log("  - Value: 0 ETH (gas.zip handles value internally)");
-		console.log("  - Data length:", txData.length, "characters");
+		// Use contractDepositTxn if available, otherwise fall back to calldata
+		let txTo: string;
+		let txData: string;
+		let txValue: bigint | undefined;
+
+		if (quote.contractDepositTxn) {
+			console.log("\n📤 Using contractDepositTxn for transaction...");
+			txTo = quote.contractDepositTxn.to;
+			txData = quote.contractDepositTxn.data;
+			txValue = BigInt(quote.contractDepositTxn.value);
+			console.log("  - To:", txTo);
+			console.log("  - Value:", txValue.toString(), "wei (", parseFloat(txValue.toString()) / 1e18, "ETH)");
+			console.log("  - Data length:", txData.length, "characters");
+		} else if (quote.calldata) {
+			console.log("\n📤 Using calldata for transaction (fallback)...");
+			txTo = DIRECT_DEPOSIT_ADDRESS;
+			txData = quote.calldata;
+			txValue = undefined;
+			console.log("  - To:", txTo);
+			console.log("  - Value: undefined (gas.zip handles value internally)");
+			console.log("  - Data length:", txData.length, "characters");
+		} else {
+			throw new Error("No calldata or contractDepositTxn found in quote response");
+		}
 
 		console.log("\n⏳ Sending transaction...");
 		const hash = await client.sendTransaction({
-			to: DIRECT_DEPOSIT_ADDRESS,
-			// Intentionally leaving value as empty to trigger refunds
-			value: undefined,
-			data: txData,
+			to: txTo as `0x${string}`,
+			value: txValue,
+			data: txData as `0x${string}`,
 		});
 
 		console.log("\n✅ Transaction sent successfully!");
