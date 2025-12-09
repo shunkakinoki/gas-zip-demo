@@ -142,8 +142,8 @@ async function getCalldata({
 		console.log("\n⏳ Sending transaction...");
 		const hash = await client.sendTransaction({
 			to: DIRECT_DEPOSIT_ADDRESS,
-			// Intentionally leaving value as half of the amount to trigger refunds
-			value: amount / 2n,
+			// Intentionally leaving value as empty to trigger refunds
+			value: undefined,
 			data: txData,
 		});
 
