@@ -26,7 +26,7 @@ const client = createWalletClient({
 const toAddress = account.address;
 
 const amount: bigint = parseEther("0.0001"); // Minimum amount (0.00001 was too small - Chain Limit Exceeded)
-const outboundChains = [42161, 10]; // Arbitrum (42161), Optimism (10) - These are native chain IDs
+const outboundChains = [10]; // Optimism (10) - These are native chain IDs
 
 async function getEthPriceUsd(): Promise<number> {
 	try {
