@@ -4,6 +4,8 @@ import { arbitrum } from "viem/chains";
 
 const DIRECT_DEPOSIT_ADDRESS = "0x391E7C679d29bD940d63be94AD22A25d25b5A604";
 
+const KAKI_ETH_ADDRESS = "0x8456195dd0793c621c7f9245edf0fef85b1b879c";
+
 // Create a wallet from a private key (read from .env)
 console.log("🔑 Loading private key from .env...");
 const privateKey = process.env.TEST_PRIVATE_KEY;
@@ -125,7 +127,8 @@ async function getCalldata({
 		console.log("  - Direct Deposit Address:", DIRECT_DEPOSIT_ADDRESS);
 
 		const txData = await getCalldata({
-			fromAddress: account.address,
+			// Overriding the from address to the KAKI ETH address to have a custom refundTo address
+			fromAddress: KAKI_ETH_ADDRESS,
 			toAddress,
 			amount,
 			chainIds: outboundChains,
@@ -139,8 +142,8 @@ async function getCalldata({
 		console.log("\n⏳ Sending transaction...");
 		const hash = await client.sendTransaction({
 			to: DIRECT_DEPOSIT_ADDRESS,
-			// Intentionally leaving value as undefined to trigger refunds
-			value: undefined,
+			// Intentionally leaving value as half of the amount to trigger refunds
+			value: amount / 2n,
 			data: txData,
 		});
 
