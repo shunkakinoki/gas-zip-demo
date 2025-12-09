@@ -154,6 +154,7 @@ async function getQuote({
 			txValue = BigInt(quote.contractDepositTxn.value);
 			console.log("  - To:", txTo);
 			console.log("  - Value:", txValue.toString(), "wei (", parseFloat(txValue.toString()) / 1e18, "ETH)");
+			console.log("  - Data:", txData);
 			console.log("  - Data length:", txData.length, "characters");
 		} else if (quote.calldata) {
 			console.log("\n📤 Using calldata for transaction (fallback)...");
@@ -162,6 +163,7 @@ async function getQuote({
 			txValue = undefined;
 			console.log("  - To:", txTo);
 			console.log("  - Value: undefined (gas.zip handles value internally)");
+			console.log("  - Data:", txData);
 			console.log("  - Data length:", txData.length, "characters");
 		} else {
 			throw new Error("No calldata or contractDepositTxn found in quote response");
