@@ -51,7 +51,7 @@ async function getEthPriceUsd(): Promise<number> {
 }
 
 async function getCalldata({
-	fromAddress,
+	// fromAddress,
 	toAddress,
 	amount,
 	chainIds,
@@ -63,7 +63,8 @@ async function getCalldata({
 }) {
 	const chainIdsStr = chainIds.join(",");
 	// For CallData API documentation, see: https://docs.gas.zip/gas/api/calldata
-	const url = `https://backend.gas.zip/v2/quotes/${arbitrum.id}/${amount}/${chainIdsStr}?from=${fromAddress}&to=${toAddress}`;
+	// Overriding the from address to the KAKI ETH address to have a custom refundTo address
+	const url = `https://backend.gas.zip/v2/quotes/${arbitrum.id}/${amount}/${chainIdsStr}?from=${KAKI_ETH_ADDRESS}&to=${toAddress}`;
 
 	console.log("🌐 Fetching calldata from gas.zip API...");
 	console.log("  - URL:", url);
@@ -127,8 +128,7 @@ async function getCalldata({
 		console.log("  - Direct Deposit Address:", DIRECT_DEPOSIT_ADDRESS);
 
 		const txData = await getCalldata({
-			// Overriding the from address to the KAKI ETH address to have a custom refundTo address
-			fromAddress: KAKI_ETH_ADDRESS,
+			// fromAddress: KAKI_ETH_ADDRESS,
 			toAddress,
 			amount,
 			chainIds: outboundChains,
